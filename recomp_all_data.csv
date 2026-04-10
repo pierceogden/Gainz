@@ -1,0 +1,51 @@
+### BODY DATA ###
+date,weight_lbs,body_fat_pct,waist_in,total_protein_g,notes
+2026-03-30,,,36,,""
+2026-03-31,,,,0,""
+2026-04-02,,,,0,""
+2026-04-03,,,,0,""
+2026-04-06,,,,0,""
+2026-04-07,,,,0,""
+2026-04-09,,,,0,""
+
+### MEALS DATA ###
+date,meal_name,protein_g,checked
+
+### LIFTS DATA ###
+date,exercise,weight_lbs,reps,sets
+2026-03-30,"Barbell Bench Press",165,5,4
+2026-03-30,"Barbell Bent-Over Row",120,6,4
+2026-03-30,"DB Overhead Press",45,8,3
+2026-03-30,"Chin-Ups or Lat Pulldown",190,6,3
+2026-03-30,"Face Pulls",15,15,3
+2026-03-31,"Barbell Back Squat",185,5,4
+2026-03-31,"Romanian Deadlift",185,8,3
+2026-03-31,"Bulgarian Split Squat",26,5,3
+2026-03-31,"Standing Calf Raise",135,15,3
+2026-03-31,"Leg Curl",80,8,3
+2026-04-02,"DB Incline Bench",55,10,3
+2026-04-02,"Chest-Supported Row",45,10,3
+2026-04-02,"Cable Lateral Raise",10,15,3
+2026-04-02,"Cable Curl",45,10,3
+2026-04-02,"Dips or CG Push-Up",190,10,3
+2026-04-02,"Cable Face Pull",10,10,3
+2026-04-03,"Trap Bar Deadlift or Sumo DL",175,8,3
+2026-04-03,"Leg Press",315,12,3
+2026-04-03,"Walking Lunges",35,12,2
+2026-04-03,"Leg Curl",75,10,3
+2026-04-06,"Barbell Bench Press",165,5,4
+2026-04-06,"Barbell Bent-Over Row",135,6,4
+2026-04-06,"DB Overhead Press",45,6,3
+2026-04-06,"Chin-Ups or Lat Pulldown",190,4,3
+2026-04-06,"Face Pulls",15,15,3
+2026-04-07,"Barbell Back Squat",175,5,4
+2026-04-07,"Romanian Deadlift",175,8,3
+2026-04-07,"Bulgarian Split Squat",26,8,3
+2026-04-07,"Leg Curl",80,10,3
+2026-04-07,"Standing Calf Raise",135,15,3
+2026-04-09,"DB Incline Bench",55,10,3
+2026-04-09,"Chest-Supported Row",55,10,3
+2026-04-09,"Cable Lateral Raise",10,15,3
+2026-04-09,"Cable Curl",45,12,3
+2026-04-09,"Dips or CG Push-Up",190,10,3
+2026-04-09,"Cable Face Pull",15,15,3
