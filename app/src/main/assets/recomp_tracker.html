@@ -190,7 +190,9 @@ function rr(){
 document.getElementById("di").value=cd;
 document.getElementById("tb").classList.toggle("hd",cd===ty());
 const el=document.getElementById("ct");
+const sy=window.scrollY;
 if(ct==="food")rf(el);else if(ct==="lifts")rl(el);else if(ct==="body")rb(el);else if(ct==="progress")rp(el);
+window.scrollTo(0,sy);
 }
 
 // ===== FOOD =====
@@ -342,15 +344,16 @@ svg+=`<text x="${x+bw/2}" y="${pt+ch+14}" fill="#6b6b80" font-size="8" text-anch
 // Multi-line SVG chart for overlaying multiple exercises
 let hiddenLifts={};
 function svgMultiLine(series,w,ht){
-// series: [{name,color,data:[{d,v}]}]
+// series: [{name,color,data:[{d,dd,v}]}] dd=raw date for sorting, d=display label
 const visible=series.filter(s=>!hiddenLifts[s.name]&&s.data.length>=2);
 if(!visible.length)return'<div style="padding:16px 0;text-align:center;color:var(--dim);font-size:12px">Select exercises above to see chart</div>';
 const allVals=visible.flatMap(s=>s.data.map(d=>d.v));
 const mn=Math.min(...allVals),mx=Math.max(...allVals),range=mx-mn||1;
 const pad=44,pr=12,pt=12,pb=24,cw=w-pad-pr,ch=ht-pt-pb;
-// Collect all unique dates across all series
-const allDates=[...new Set(visible.flatMap(s=>s.data.map(d=>d.d)))].sort();
-const dateIdx={};allDates.forEach((d,i)=>dateIdx[d]=i);
+// Collect all unique dates, sort by raw date (chronological)
+const datePairs={};visible.forEach(s=>s.data.forEach(d=>{datePairs[d.dd||d.d]={dd:d.dd||d.d,d:d.d}}));
+const allDates=Object.values(datePairs).sort((a,b)=>a.dd.localeCompare(b.dd));
+const dateIdx={};allDates.forEach((dp,i)=>dateIdx[dp.dd]=i);
 const xStep=allDates.length>1?cw/(allDates.length-1):cw;
 // Y axis
 const ySteps=3,yLabels=[];for(let i=0;i<=ySteps;i++){const v=mn+(range*i/ySteps);yLabels.push({y:pt+ch-(ch*i/ySteps),l:v%1===0?v.toFixed(0):v.toFixed(1)})}
@@ -359,10 +362,10 @@ let svg=`<svg width="100%" viewBox="0 0 ${w} ${ht}" style="display:block">`;
 yLabels.forEach(yl=>{svg+=`<line x1="${pad}" y1="${yl.y}" x2="${w-pr}" y2="${yl.y}" stroke="#1e1e2e" stroke-width="1"/>`});
 yLabels.forEach(yl=>{svg+=`<text x="${pad-6}" y="${yl.y+3.5}" fill="#6b6b80" font-size="9" text-anchor="end">${yl.l}</text>`});
 // X axis
-if(allDates.length>0){svg+=`<text x="${pad}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="start">${allDates[0]}</text>`;svg+=`<text x="${w-pr}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="end">${allDates[allDates.length-1]}</text>`}
+if(allDates.length>0){svg+=`<text x="${pad}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="start">${allDates[0].d}</text>`;svg+=`<text x="${w-pr}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="end">${allDates[allDates.length-1].d}</text>`}
 // Lines
 visible.forEach(s=>{
-const pts=s.data.map(d=>[pad+(dateIdx[d.d]||0)*xStep,pt+ch-(((d.v-mn)/range)*ch)]);
+const pts=s.data.map(d=>[pad+(dateIdx[d.dd||d.d]||0)*xStep,pt+ch-(((d.v-mn)/range)*ch)]);
 if(pts.length<2)return;
 const path=pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
 svg+=`<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
@@ -390,7 +393,7 @@ Object.entries(LIFT_GROUPS).forEach(([groupName,group])=>{
 const groupEx=allEx.filter(n=>group.exercises.some(ge=>n.toLowerCase()===ge.toLowerCase()));
 if(!groupEx.length)return;
 // Build series for multi-line chart
-const series=groupEx.map(n=>({name:n,color:colorMap[n],data:lp[n].map(e=>({d:e.d,v:e.w}))}));
+const series=groupEx.map(n=>({name:n,color:colorMap[n],data:lp[n].map(e=>({d:e.d,dd:e.dd,v:e.w}))}));
 h+=`<div class="cd"><div class="lb">${groupName}</div>`;
 // Toggle pills
 h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">`;
