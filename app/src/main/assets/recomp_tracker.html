@@ -345,7 +345,7 @@ svg+=`<text x="${x+bw/2}" y="${pt+ch+14}" fill="#6b6b80" font-size="8" text-anch
 let hiddenLifts={};
 function svgMultiLine(series,w,ht){
 // series: [{name,color,data:[{d,dd,v}]}] dd=raw date for sorting, d=display label
-const visible=series.filter(s=>!hiddenLifts[s.name]&&s.data.length>=2);
+const visible=series.filter(s=>!hiddenLifts[s.name]&&s.data.length>=1);
 if(!visible.length)return'<div style="padding:16px 0;text-align:center;color:var(--dim);font-size:12px">Select exercises above to see chart</div>';
 const allVals=visible.flatMap(s=>s.data.map(d=>d.v));
 const mn=Math.min(...allVals),mx=Math.max(...allVals),range=mx-mn||1;
@@ -363,14 +363,12 @@ yLabels.forEach(yl=>{svg+=`<line x1="${pad}" y1="${yl.y}" x2="${w-pr}" y2="${yl.
 yLabels.forEach(yl=>{svg+=`<text x="${pad-6}" y="${yl.y+3.5}" fill="#6b6b80" font-size="9" text-anchor="end">${yl.l}</text>`});
 // X axis
 if(allDates.length>0){svg+=`<text x="${pad}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="start">${allDates[0].d}</text>`;svg+=`<text x="${w-pr}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="end">${allDates[allDates.length-1].d}</text>`}
-// Lines
+// Lines + dots
 visible.forEach(s=>{
 const pts=s.data.map(d=>[pad+(dateIdx[d.dd||d.d]||0)*xStep,pt+ch-(((d.v-mn)/range)*ch)]);
-if(pts.length<2)return;
-const path=pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
-svg+=`<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
-pts.forEach(p=>{svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${s.color}" stroke="#12121a" stroke-width="1.5"/>`});
-// Label last point
+if(pts.length>=2){const path=pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+svg+=`<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`}
+pts.forEach(p=>{svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="${pts.length===1?5:3}" fill="${s.color}" stroke="#12121a" stroke-width="1.5"/>`});
 const lp=pts[pts.length-1],lv=s.data[s.data.length-1].v;
 svg+=`<text x="${lp[0]}" y="${lp[1]-8}" fill="${s.color}" font-size="9" font-weight="700" text-anchor="middle">${lv}</text>`;
 });
@@ -398,7 +396,7 @@ h+=`<div class="cd"><div class="lb">${groupName}</div>`;
 // Toggle pills
 h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">`;
 groupEx.forEach(n=>{const hidden=!!hiddenLifts[n];const pr=Math.max(...lp[n].map(e=>e.w));
-h+=`<div onclick="TGL('${n.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:11px;border:1px solid ${hidden?'var(--border)':colorMap[n]+'66'};background:${hidden?'transparent':colorMap[n]+'15'};opacity:${hidden?'0.4':'1'}"><span style="width:8px;height:8px;border-radius:50%;background:${colorMap[n]};display:inline-block;flex-shrink:0"></span><span style="color:${hidden?'var(--muted)':'var(--text)'};white-space:nowrap">${n.replace(/Barbell |Cable |DB /g,'')}</span><span style="color:${colorMap[n]};font-weight:700;font-size:10px">${pr}</span></div>`});
+h+=`<button data-tgl="${n}" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:11px;border:1px solid ${hidden?'var(--border)':colorMap[n]+'66'};background:${hidden?'transparent':colorMap[n]+'15'};opacity:${hidden?'0.4':'1'};-webkit-appearance:none;outline:none"><span style="width:8px;height:8px;border-radius:50%;background:${colorMap[n]};display:inline-block;flex-shrink:0"></span><span style="color:${hidden?'var(--muted)':'var(--text)'};white-space:nowrap">${n.replace(/Barbell |Cable |DB /g,'')}</span><span style="color:${colorMap[n]};font-weight:700;font-size:10px">${pr}</span></button>`});
 h+=`</div>`;
 // Chart
 h+=svgMultiLine(series,320,180);
@@ -426,7 +424,15 @@ if(pv==="protein"){const last7=so.slice(-7),vals=last7.map(d=>tp(d)).filter(v=>v
 el.innerHTML=h;
 }
 window.SPV=function(v){pv=v;rr()};
-window.TGL=function(name){hiddenLifts[name]=!hiddenLifts[name];rr()};
+// Event delegation for toggle buttons (more reliable in WebView than inline onclick)
+document.addEventListener('click',function(e){
+const btn=e.target.closest('[data-tgl]');
+if(!btn)return;
+e.preventDefault();e.stopPropagation();
+const name=btn.getAttribute('data-tgl');
+hiddenLifts[name]=!hiddenLifts[name];
+rr();
+},true);
 
 function cwa(s){const w={};s.filter(d=>D[d].weight).forEach(d=>{const dt=new Date(d+"T12:00:00"),ws=new Date(dt);ws.setDate(dt.getDate()-dt.getDay());const k=ws.toISOString().split("T")[0];if(!w[k])w[k]=[];w[k].push(Number(D[d].weight))});return Object.entries(w).sort(([a],[b])=>a.localeCompare(b)).map(([wk,vs])=>({wk:fm(wk),a:Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10}))}
 function clp(s){
