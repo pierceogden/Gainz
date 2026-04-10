@@ -139,6 +139,12 @@ const WP={
 {n:"Seated Calf Raise",s:3,r:15,rest:"60s",ss:"C"}]}
 };
 const TL=["Bench Press","Squat","Deadlift","Overhead Press","Row"];
+// Exercise grouping for charts
+const LIFT_GROUPS={
+"Barbell Compounds":{color:"#4f8ff7",exercises:["Barbell Bench Press","Barbell Back Squat","Barbell Bent-Over Row","Romanian Deadlift","Trap Bar Deadlift or Sumo DL","Trap Bar or Sumo Deadlift"]},
+"Press & Pull":{color:"#34d399",exercises:["DB Overhead Press","DB Incline Bench","Chest-Supported Row","Chin-Ups or Lat Pulldown","Dips or CG Push-Up"]},
+"Isolation":{color:"#a78bfa",exercises:["Cable Curl","Cable Lateral Raise","Cable Face Pull","Face Pulls","Leg Curl","Standing Calf Raise","Seated Calf Raise","Bulgarian Split Squat","Walking Lunges","Leg Press","Nordic Curl or GHR"]}
+};
 const SK="recomp-v6",MK="recomp-meals-v2";
 let D={},CM=null,cd=ty(),ct="food",pv="weight",CJ={},chartsReady=false;
 
@@ -333,6 +339,40 @@ svg+=`<text x="${x+bw/2}" y="${y-5}" fill="${c}" font-size="10" font-weight="700
 svg+=`<text x="${x+bw/2}" y="${pt+ch+14}" fill="#6b6b80" font-size="8" text-anchor="middle">${d.d.length>8?d.d.slice(0,8):d.d}</text>`;
 });svg+=`</svg>`;return svg}
 
+// Multi-line SVG chart for overlaying multiple exercises
+let hiddenLifts={};
+function svgMultiLine(series,w,ht){
+// series: [{name,color,data:[{d,v}]}]
+const visible=series.filter(s=>!hiddenLifts[s.name]&&s.data.length>=2);
+if(!visible.length)return'<div style="padding:16px 0;text-align:center;color:var(--dim);font-size:12px">Select exercises above to see chart</div>';
+const allVals=visible.flatMap(s=>s.data.map(d=>d.v));
+const mn=Math.min(...allVals),mx=Math.max(...allVals),range=mx-mn||1;
+const pad=44,pr=12,pt=12,pb=24,cw=w-pad-pr,ch=ht-pt-pb;
+// Collect all unique dates across all series
+const allDates=[...new Set(visible.flatMap(s=>s.data.map(d=>d.d)))].sort();
+const dateIdx={};allDates.forEach((d,i)=>dateIdx[d]=i);
+const xStep=allDates.length>1?cw/(allDates.length-1):cw;
+// Y axis
+const ySteps=3,yLabels=[];for(let i=0;i<=ySteps;i++){const v=mn+(range*i/ySteps);yLabels.push({y:pt+ch-(ch*i/ySteps),l:v%1===0?v.toFixed(0):v.toFixed(1)})}
+let svg=`<svg width="100%" viewBox="0 0 ${w} ${ht}" style="display:block">`;
+// Grid
+yLabels.forEach(yl=>{svg+=`<line x1="${pad}" y1="${yl.y}" x2="${w-pr}" y2="${yl.y}" stroke="#1e1e2e" stroke-width="1"/>`});
+yLabels.forEach(yl=>{svg+=`<text x="${pad-6}" y="${yl.y+3.5}" fill="#6b6b80" font-size="9" text-anchor="end">${yl.l}</text>`});
+// X axis
+if(allDates.length>0){svg+=`<text x="${pad}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="start">${allDates[0]}</text>`;svg+=`<text x="${w-pr}" y="${ht-2}" fill="#6b6b80" font-size="9" text-anchor="end">${allDates[allDates.length-1]}</text>`}
+// Lines
+visible.forEach(s=>{
+const pts=s.data.map(d=>[pad+(dateIdx[d.d]||0)*xStep,pt+ch-(((d.v-mn)/range)*ch)]);
+if(pts.length<2)return;
+const path=pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+svg+=`<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
+pts.forEach(p=>{svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${s.color}" stroke="#12121a" stroke-width="1.5"/>`});
+// Label last point
+const lp=pts[pts.length-1],lv=s.data[s.data.length-1].v;
+svg+=`<text x="${lp[0]}" y="${lp[1]-8}" fill="${s.color}" font-size="9" font-weight="700" text-anchor="middle">${lv}</text>`;
+});
+svg+=`</svg>`;return svg}
+
 // Data display with charts
 if(pv==="weight"){if(wa.length){const wd=wa.map(w=>({d:w.wk,v:w.a}));h+=`<div class="cd"><div class="lb">Weekly Averages</div>${svgLine(wd,"#4f8ff7","lbs","",320,180)}`;wa.forEach(w=>{h+=`<div class="re"><span style="color:var(--dim)">Wk of ${w.wk}</span><span>${w.a} lbs</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log weigh-ins on Body tab</p></div>`}
 
@@ -342,7 +382,39 @@ if(pv==="comp"){const arr=so.filter(d=>D[d].weight&&D[d].bodyFat);if(arr.length>
 
 if(pv==="waist"){if(wArr.length>1){h+=`<div class="cd"><div class="lb">Waist History</div>${svgLine(wArr,"#a78bfa","in","\"",320,180)}`;wArr.forEach(w=>{h+=`<div class="re"><span style="color:var(--dim)">${w.d}</span><span>${w.v}"</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log waist on Body tab</p></div>`}
 
-if(pv==="lifts"){const keys=Object.keys(lp);if(keys.length){const liftColors=["#4f8ff7","#34d399","#fbbf24","#fb923c","#a78bfa"];keys.forEach((name,ki)=>{const entries=lp[name],pr=Math.max(...entries.map(e=>e.w));h+=`<div class="cd"><div class="lb">${name} — PR: ${pr}lbs${entries.length>=2?` (+${pr-entries[0].w})`:""}</div>`;if(entries.length>=2){const ed=entries.map(e=>({d:e.d,v:e.w}));h+=svgLine(ed,liftColors[ki%liftColors.length],"lbs","",320,150)}entries.forEach(e=>{h+=`<div class="re"><span style="color:var(--dim)">${e.d}</span><span>${e.w} lbs${e.w>=pr?' ⭐':''}</span></div>`});h+=`</div>`})}else h+=`<div class="cd"><p class="cm">Log lifts to track PRs</p></div>`}
+if(pv==="lifts"){const allEx=Object.keys(lp);if(allEx.length){
+const exColors=["#4f8ff7","#34d399","#fbbf24","#fb923c","#a78bfa","#f87171","#38bdf8","#818cf8","#fb7185","#2dd4bf","#e879f9","#facc15"];
+const colorMap={};let ci=0;allEx.forEach(n=>{colorMap[n]=exColors[ci%exColors.length];ci++});
+// Group exercises
+Object.entries(LIFT_GROUPS).forEach(([groupName,group])=>{
+const groupEx=allEx.filter(n=>group.exercises.some(ge=>n.toLowerCase()===ge.toLowerCase()));
+if(!groupEx.length)return;
+// Build series for multi-line chart
+const series=groupEx.map(n=>({name:n,color:colorMap[n],data:lp[n].map(e=>({d:e.d,v:e.w}))}));
+h+=`<div class="cd"><div class="lb">${groupName}</div>`;
+// Toggle pills
+h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">`;
+groupEx.forEach(n=>{const hidden=!!hiddenLifts[n];const pr=Math.max(...lp[n].map(e=>e.w));
+h+=`<div onclick="TGL('${n.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:11px;border:1px solid ${hidden?'var(--border)':colorMap[n]+'66'};background:${hidden?'transparent':colorMap[n]+'15'};opacity:${hidden?'0.4':'1'}"><span style="width:8px;height:8px;border-radius:50%;background:${colorMap[n]};display:inline-block;flex-shrink:0"></span><span style="color:${hidden?'var(--muted)':'var(--text)'};white-space:nowrap">${n.replace(/Barbell |Cable |DB /g,'')}</span><span style="color:${colorMap[n]};font-weight:700;font-size:10px">${pr}</span></div>`});
+h+=`</div>`;
+// Chart
+h+=svgMultiLine(series,320,180);
+// PR table for visible exercises
+const visibleEx=groupEx.filter(n=>!hiddenLifts[n]);
+visibleEx.forEach(n=>{const entries=lp[n],pr=Math.max(...entries.map(e=>e.w));
+h+=`<div style="margin-top:8px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="width:6px;height:6px;border-radius:50%;background:${colorMap[n]}"></span><span style="font-size:11px;color:var(--dim)">${n} — PR: ${pr}lbs</span></div>`;
+entries.forEach(e=>{h+=`<div class="re"><span style="color:var(--dim)">${e.d}</span><span>${e.w} lbs${e.w>=pr?' ⭐':''}</span></div>`});
+h+=`</div>`});
+h+=`</div>`});
+// Uncategorized exercises
+const categorized=new Set(Object.values(LIFT_GROUPS).flatMap(g=>g.exercises.map(e=>e.toLowerCase())));
+const uncatEx=allEx.filter(n=>!categorized.has(n.toLowerCase()));
+if(uncatEx.length){h+=`<div class="cd"><div class="lb">Other Exercises</div>`;
+uncatEx.forEach(n=>{const entries=lp[n],pr=Math.max(...entries.map(e=>e.w));
+h+=`<div style="margin-top:6px"><div style="font-size:12px;color:var(--text);font-weight:600">${n} — PR: ${pr}lbs</div>`;
+entries.forEach(e=>{h+=`<div class="re"><span style="color:var(--dim)">${e.d}</span><span>${e.w} lbs${e.w>=pr?' ⭐':''}</span></div>`});
+h+=`</div>`});h+=`</div>`}
+}else h+=`<div class="cd"><p class="cm">Log lifts to track PRs</p></div>`}
 
 if(pv==="volume"){const vol=cvol(so);if(vol.length){const vd=vol.map(v=>({d:v.wk,v:v.v}));h+=`<div class="cd"><div class="lb">Weekly Volume (lbs x reps x sets)</div>${vol.length>=2?svgLine(vd,"#34d399","vol","",320,180):svgBars(vd,["#34d399"],320,160)}`;vol.forEach(v=>{h+=`<div class="re"><span style="color:var(--dim)">Wk of ${v.wk}</span><span>${v.v.toLocaleString()} lbs</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log lifts for volume</p></div>`}
 
@@ -351,9 +423,26 @@ if(pv==="protein"){const last7=so.slice(-7),vals=last7.map(d=>tp(d)).filter(v=>v
 el.innerHTML=h;
 }
 window.SPV=function(v){pv=v;rr()};
+window.TGL=function(name){hiddenLifts[name]=!hiddenLifts[name];rr()};
 
 function cwa(s){const w={};s.filter(d=>D[d].weight).forEach(d=>{const dt=new Date(d+"T12:00:00"),ws=new Date(dt);ws.setDate(dt.getDate()-dt.getDay());const k=ws.toISOString().split("T")[0];if(!w[k])w[k]=[];w[k].push(Number(D[d].weight))});return Object.entries(w).sort(([a],[b])=>a.localeCompare(b)).map(([wk,vs])=>({wk:fm(wk),a:Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10}))}
-function clp(s){const by={};s.forEach(d=>(D[d].lifts||[]).forEach(l=>{const k=TL.find(kk=>l.exercise.toLowerCase().includes(kk.toLowerCase()));if(!k||!l.weight)return;if(!by[k])by[k]=[];by[k].push({d:fm(d),w:Number(l.weight)})}));Object.values(by).forEach(arr=>{let best=0;arr.forEach(e=>{best=Math.max(best,e.w);e.best=best})});return by}
+function clp(s){
+// Track per individual exercise name (no keyword matching)
+const by={};
+s.forEach(d=>(D[d].lifts||[]).forEach(l=>{
+if(!l.weight||!l.exercise)return;
+const k=l.exercise;
+if(!by[k])by[k]=[];
+by[k].push({d:fm(d),dd:d,w:Number(l.weight)})
+}));
+// Dedupe same exercise on same day (keep heaviest)
+Object.keys(by).forEach(k=>{
+const seen={};const deduped=[];
+by[k].forEach(e=>{if(!seen[e.dd]||e.w>seen[e.dd].w){seen[e.dd]=e}});
+by[k]=Object.values(seen).sort((a,b)=>a.dd.localeCompare(b.dd))
+});
+Object.values(by).forEach(arr=>{let best=0;arr.forEach(e=>{best=Math.max(best,e.w);e.best=best})});
+return by}
 function cvol(s){const w={};s.forEach(d=>{const dt=new Date(d+"T12:00:00"),ws=new Date(dt);ws.setDate(dt.getDate()-dt.getDay());const k=ws.toISOString().split("T")[0];const v=(D[d].lifts||[]).reduce((s,l)=>s+(Number(l.weight)||0)*(Number(l.reps)||0)*(Number(l.sets)||0),0);if(v>0)w[k]=(w[k]||0)+v});return Object.entries(w).sort(([a],[b])=>a.localeCompare(b)).map(([wk,v])=>({wk:fm(wk),v:Math.round(v)}))}
 
 // Preload seed data (user's historical data)
