@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Letter G for Gainz -->
+    <path
+        android:fillColor="#FF4F8FF7"
+        android:pathData="M54,28 C38.5,28 26,40.5 26,56 C26,71.5 38.5,84 54,84 C63.5,84 72,79 77,71.5 L77,56 L54,56 L54,64 L68,64 L68,68.5 C64.5,73 59.5,76 54,76 C43,76 34,67 34,56 C34,45 43,36 54,36 C60,36 65.5,38.5 69,42.5 L75,37 C70,31.5 62.5,28 54,28Z" />
+</vector>
