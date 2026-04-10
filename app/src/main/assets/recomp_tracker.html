@@ -258,7 +258,18 @@ el.innerHTML=h;
 
 // CSV
 window.EC=function(){const so=Object.keys(D).sort(),ml=gm();let b="date,weight_lbs,body_fat_pct,waist_in,total_protein_g,notes\n";so.forEach(d=>{const dd=D[d];b+=`${d},${dd.weight||""},${dd.bodyFat||""},${dd.waist||""},${tp(d)},"${(dd.notes||"").replace(/"/g,'""')}"\n`});let m="date,meal_name,protein_g,checked\n";so.forEach(d=>{const dd=D[d];ml.forEach(x=>{if(dd.meals&&dd.meals[x.id])m+=`${d},"${x.name}",${dd.mealProtein?.[x.id]??x.protein},1\n`});(dd.cf||[]).forEach(f=>{m+=`${d},"${f.name}",${f.protein},1\n`})});let l="date,exercise,weight_lbs,reps,sets\n";so.forEach(d=>{(D[d].lifts||[]).forEach(x=>{l+=`${d},"${x.exercise}",${x.weight||""},${x.reps||""},${x.sets||""}\n`})});const csv="### BODY DATA ###\n"+b+"\n### MEALS DATA ###\n"+m+"\n### LIFTS DATA ###\n"+l;if(typeof Android!=='undefined'&&Android.saveFile){Android.saveFile("recomp_"+ty()+".csv",csv)}else{const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="recomp_"+ty()+".csv";a.click()}};
-window.IC=function(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=function(e){try{const secs=e.target.result.split("###").filter(s=>s.trim());const ml=gm();secs.forEach(sec=>{const lines=sec.trim().split("\n"),hd=lines[0].toLowerCase();if(hd.includes("body"))lines.slice(2).filter(l=>l.trim()).forEach(row=>{const m=row.match(/^(\d{4}-\d{2}-\d{2}),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);if(!m)return;const[,d,w,bf,wa,,n]=m;if(!D[d])D[d]=gd(d);if(w)D[d].weight=w;if(bf)D[d].bodyFat=bf;if(wa)D[d].waist=wa;if(n)D[d].notes=n.replace(/^"|"$/g,"")});else if(hd.includes("meal"))lines.slice(2).filter(l=>l.trim()).forEach(row=>{const m=row.match(/^(\d{4}-\d{2}-\d{2}),"([^"]*)",(\d+),(\d)$/);if(!m)return;const[,d,nm,p,c]=m;if(!D[d])D[d]=gd(d);const t=ml.find(x=>x.name===nm);if(t&&c==="1"){D[d].meals[t.id]=true;if(!D[d].mealProtein)D[d].mealProtein={};D[d].mealProtein[t.id]=Number(p)}else if(c==="1"){if(!D[d].cf)D[d].cf=[];D[d].cf.push({name:nm,protein:Number(p),id:Date.now()+Math.random()})}});else if(hd.includes("lift"))lines.slice(2).filter(l=>l.trim()).forEach(row=>{const m=row.match(/^(\d{4}-\d{2}-\d{2}),"([^"]*)",([^,]*),([^,]*),([^,]*)$/);if(!m)return;const[,d,ex,w,r,s]=m;if(!D[d])D[d]=gd(d);if(!D[d].lifts)D[d].lifts=[];D[d].lifts.push({exercise:ex,weight:w||"",reps:r||"",sets:s||"",id:Date.now()+Math.random()})})});sv();rr();alert("Imported!")}catch(er){alert("Error: "+er.message)}};r.readAsText(f);inp.value=""};
+function parseCSV(text){
+const ml=gm();const lines=text.split("\n");let section="";let count=0;
+lines.forEach(line=>{const t=line.trim();if(!t)return;
+if(t.match(/^#{2,}\s*BODY\s*DATA/i)){section="body";return}
+if(t.match(/^#{2,}\s*MEALS?\s*DATA/i)){section="meal";return}
+if(t.match(/^#{2,}\s*LIFTS?\s*DATA/i)){section="lift";return}
+if(t.startsWith("date,"))return;
+if(section==="body"){const m=t.match(/^(\d{4}-\d{2}-\d{2}),([^,]*),([^,]*),([^,]*),([^,]*),?(.*)$/);if(!m)return;const[,d,w,bf,wa,,n]=m;if(!D[d])D[d]=gd(d);if(w)D[d].weight=w;if(bf)D[d].bodyFat=bf;if(wa)D[d].waist=wa;if(n)D[d].notes=n.replace(/^"|"$/g,"");count++}
+else if(section==="meal"){const m=t.match(/^(\d{4}-\d{2}-\d{2}),"([^"]*)",(\d+),(\d)$/);if(!m)return;const[,d,nm,p,c]=m;if(!D[d])D[d]=gd(d);const tt=ml.find(x=>x.name===nm);if(tt&&c==="1"){D[d].meals[tt.id]=true;if(!D[d].mealProtein)D[d].mealProtein={};D[d].mealProtein[tt.id]=Number(p)}else if(c==="1"){if(!D[d].cf)D[d].cf=[];D[d].cf.push({name:nm,protein:Number(p),id:Date.now()+Math.random()})}count++}
+else if(section==="lift"){const m=t.match(/^(\d{4}-\d{2}-\d{2}),"([^"]*)",([^,]*),([^,]*),([^,]*)$/);if(!m)return;const[,d,ex,w,r,s]=m;if(!D[d])D[d]=gd(d);if(!D[d].lifts)D[d].lifts=[];D[d].lifts.push({exercise:ex,weight:w||"",reps:r||"",sets:s||"",id:Date.now()+Math.random()});count++}
+});return count}
+window.IC=function(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=function(e){try{const count=parseCSV(e.target.result);sv();rr();alert("Imported "+count+" records!")}catch(er){alert("Error: "+er.message)}};r.readAsText(f);inp.value=""};
 window.RA=async function(){if(!confirm("Reset all data?"))return;try{await window.storage.delete(SK);await window.storage.delete(MK)}catch(e){}D={};CM=null;rr()};
 
 // ===== PROGRESS =====
@@ -277,20 +288,65 @@ else if(waD>=0&&Math.abs(wD)<1)sg={e:"🔄",m:"Stalling. Drop rest day carbs 25g
 else sg={e:"📊",m:"Keep logging.",c:"var(--dim)"};
 h+=`<div class="cd"><div class="sb"><span style="font-size:20px">${sg.e}</span><div><div style="font-size:12px;font-weight:600;margin-bottom:2px">Recomp Signal</div><div style="font-size:13px;color:${sg.c}">${sg.m}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Wt: ${wD>0?"+":""}${wD.toFixed(1)}lbs${wArr.length>=2?` · Waist: ${waD>0?"+":""}${waD.toFixed(2)}"`:""}</div></div></div></div>`}
 
-// Data display (text-based, no Chart.js dependency)
-if(pv==="weight"){if(wa.length){h+=`<div class="cd"><div class="lb">Weekly Averages</div>`;wa.forEach(w=>{h+=`<div class="re"><span style="color:var(--dim)">Wk of ${w.wk}</span><span>${w.a} lbs</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log weigh-ins on Body tab</p></div>`}
+// SVG line chart helper
+function svgLine(data,color,label,unit,w,ht){
+if(!data||data.length<2)return'<div class="cd"><p class="cm">Need 2+ data points</p></div>';
+const vals=data.map(d=>d.v),labels=data.map(d=>d.d);
+const mn=Math.min(...vals),mx=Math.max(...vals),range=mx-mn||1;
+const pad=40,pr=30,pt=16,pb=28,cw=w-pad-pr,ch=ht-pt-pb;
+const step=cw/(vals.length-1);
+const pts=vals.map((v,i)=>[pad+i*step,pt+ch-(((v-mn)/range)*ch)]);
+const path=pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+const area=path+" L"+pts[pts.length-1][0].toFixed(1)+","+(pt+ch)+" L"+pad+","+(pt+ch)+" Z";
+// Y axis labels
+const ySteps=4,yLabels=[];for(let i=0;i<=ySteps;i++){const v=mn+(range*i/ySteps);yLabels.push({y:pt+ch-(ch*i/ySteps),l:v%1===0?v.toFixed(0):v.toFixed(1)})}
+let svg=`<svg width="100%" viewBox="0 0 ${w} ${ht}" style="display:block">`;
+svg+=`<defs><linearGradient id="g_${color.replace(/[^a-z]/g,'')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.25"/><stop offset="100%" stop-color="${color}" stop-opacity="0.02"/></linearGradient></defs>`;
+// Grid lines
+yLabels.forEach(yl=>{svg+=`<line x1="${pad}" y1="${yl.y}" x2="${w-pr}" y2="${yl.y}" stroke="#1e1e2e" stroke-width="1"/>`});
+svg+=`<text x="${pad-4}" y="${pt-4}" fill="#6b6b80" font-size="10" text-anchor="end">${label}</text>`;
+yLabels.forEach(yl=>{svg+=`<text x="${pad-6}" y="${yl.y+3.5}" fill="#6b6b80" font-size="9" text-anchor="end">${yl.l}</text>`});
+// X axis labels (first and last)
+svg+=`<text x="${pad}" y="${ht-4}" fill="#6b6b80" font-size="9" text-anchor="start">${labels[0]}</text>`;
+svg+=`<text x="${w-pr}" y="${ht-4}" fill="#6b6b80" font-size="9" text-anchor="end">${labels[labels.length-1]}</text>`;
+// Area fill + line
+svg+=`<path d="${area}" fill="url(#g_${color.replace(/[^a-z]/g,'')})" />`;
+svg+=`<path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+// Dots
+pts.forEach((p,i)=>{svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${color}" stroke="#12121a" stroke-width="1.5"/>`});
+// Latest value
+svg+=`<text x="${pts[pts.length-1][0]}" y="${pts[pts.length-1][1]-10}" fill="${color}" font-size="11" font-weight="700" text-anchor="middle">${vals[vals.length-1]}${unit}</text>`;
+svg+=`</svg>`;return svg}
 
-if(pv==="bf"){const arr=so.filter(d=>D[d].bodyFat);if(arr.length>1){h+=`<div class="cd"><div class="lb">Body Fat % History</div>`;arr.forEach(d=>{h+=`<div class="re"><span style="color:var(--dim)">${fm(d)}</span><span>${D[d].bodyFat}%</span></div>`});const d0=Number(D[arr[0]].bodyFat),d1=Number(D[arr[arr.length-1]].bodyFat);h+=`<div style="margin-top:8px;font-size:13px;color:${d1<d0?"var(--green)":"var(--orange)"}">Change: ${(d1-d0)>0?"+":""}${(d1-d0).toFixed(1)}%</div></div>`}else h+=`<div class="cd"><p class="cm">Need 2+ entries</p></div>`}
+// SVG bar chart helper
+function svgBars(data,colors,w,ht){
+if(!data||!data.length)return'';
+const pad=10,pr=10,pt=20,pb=40,cw=w-pad-pr,ch=ht-pt-pb;
+const mx=Math.max(...data.map(d=>d.v))||1;
+const bw=Math.min(32,cw/data.length*0.7),gap=(cw-bw*data.length)/(data.length+1);
+let svg=`<svg width="100%" viewBox="0 0 ${w} ${ht}" style="display:block">`;
+data.forEach((d,i)=>{
+const x=pad+gap+(bw+gap)*i,bh=(d.v/mx)*ch,y=pt+ch-bh;
+const c=colors[i%colors.length];
+svg+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${c}" opacity="0.85"/>`;
+svg+=`<text x="${x+bw/2}" y="${y-5}" fill="${c}" font-size="10" font-weight="700" text-anchor="middle">${d.v}</text>`;
+svg+=`<text x="${x+bw/2}" y="${pt+ch+14}" fill="#6b6b80" font-size="8" text-anchor="middle">${d.d.length>8?d.d.slice(0,8):d.d}</text>`;
+});svg+=`</svg>`;return svg}
 
-if(pv==="comp"){const arr=so.filter(d=>D[d].weight&&D[d].bodyFat);if(arr.length>1){h+=`<div class="cd"><div class="lb">Body Composition Over Time</div>`;arr.forEach(d=>{const w=Number(D[d].weight),bf=Number(D[d].bodyFat),ln=(w*(1-bf/100)).toFixed(1),ft=(w*bf/100).toFixed(1);h+=`<div class="re"><span style="color:var(--dim)">${fm(d)}</span><div style="display:flex;gap:14px"><span style="color:var(--green)">${ln} lean</span><span style="color:var(--orange)">${ft} fat</span></div></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Need weight + BF% on 2+ days</p></div>`}
+// Data display with charts
+if(pv==="weight"){if(wa.length){const wd=wa.map(w=>({d:w.wk,v:w.a}));h+=`<div class="cd"><div class="lb">Weekly Averages</div>${svgLine(wd,"#4f8ff7","lbs","",320,180)}`;wa.forEach(w=>{h+=`<div class="re"><span style="color:var(--dim)">Wk of ${w.wk}</span><span>${w.a} lbs</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log weigh-ins on Body tab</p></div>`}
 
-if(pv==="waist"){if(wArr.length>1){h+=`<div class="cd"><div class="lb">Waist History</div>`;wArr.forEach(w=>{h+=`<div class="re"><span style="color:var(--dim)">${w.d}</span><span>${w.v}"</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log waist on Body tab</p></div>`}
+if(pv==="bf"){const arr=so.filter(d=>D[d].bodyFat);if(arr.length>1){const bd=arr.map(d=>({d:fm(d),v:Number(D[d].bodyFat)}));h+=`<div class="cd"><div class="lb">Body Fat % History</div>${svgLine(bd,"#fb923c","%","%",320,180)}`;arr.forEach(d=>{h+=`<div class="re"><span style="color:var(--dim)">${fm(d)}</span><span>${D[d].bodyFat}%</span></div>`});const d0=Number(D[arr[0]].bodyFat),d1=Number(D[arr[arr.length-1]].bodyFat);h+=`<div style="margin-top:8px;font-size:13px;color:${d1<d0?"var(--green)":"var(--orange)"}">Change: ${(d1-d0)>0?"+":""}${(d1-d0).toFixed(1)}%</div></div>`}else h+=`<div class="cd"><p class="cm">Need 2+ entries</p></div>`}
 
-if(pv==="lifts"){const keys=Object.keys(lp);if(keys.length){keys.forEach(name=>{const entries=lp[name],pr=Math.max(...entries.map(e=>e.w));h+=`<div class="cd"><div class="lb">${name} — PR: ${pr}lbs${entries.length>=2?` (+${pr-entries[0].w})`:""}</div>`;entries.forEach(e=>{h+=`<div class="re"><span style="color:var(--dim)">${e.d}</span><span>${e.w} lbs${e.w>=pr?' ⭐':''}</span></div>`});h+=`</div>`})}else h+=`<div class="cd"><p class="cm">Log lifts to track PRs</p></div>`}
+if(pv==="comp"){const arr=so.filter(d=>D[d].weight&&D[d].bodyFat);if(arr.length>1){h+=`<div class="cd"><div class="lb">Body Composition Over Time</div>`;const ld=arr.map(d=>({d:fm(d),v:Number((Number(D[d].weight)*(1-Number(D[d].bodyFat)/100)).toFixed(1))}));const fd=arr.map(d=>({d:fm(d),v:Number((Number(D[d].weight)*Number(D[d].bodyFat)/100).toFixed(1))}));h+=svgLine(ld,"#34d399","lean","",320,160);h+=`<div style="height:8px"></div>`;h+=svgLine(fd,"#fb923c","fat","",320,160);arr.forEach(d=>{const w=Number(D[d].weight),bf=Number(D[d].bodyFat),ln=(w*(1-bf/100)).toFixed(1),ft=(w*bf/100).toFixed(1);h+=`<div class="re"><span style="color:var(--dim)">${fm(d)}</span><div style="display:flex;gap:14px"><span style="color:var(--green)">${ln} lean</span><span style="color:var(--orange)">${ft} fat</span></div></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Need weight + BF% on 2+ days</p></div>`}
 
-if(pv==="volume"){const vol=cvol(so);if(vol.length){h+=`<div class="cd"><div class="lb">Weekly Volume (lbs × reps × sets)</div>`;vol.forEach(v=>{h+=`<div class="re"><span style="color:var(--dim)">Wk of ${v.wk}</span><span>${v.v.toLocaleString()} lbs</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log lifts for volume</p></div>`}
+if(pv==="waist"){if(wArr.length>1){h+=`<div class="cd"><div class="lb">Waist History</div>${svgLine(wArr,"#a78bfa","in","\"",320,180)}`;wArr.forEach(w=>{h+=`<div class="re"><span style="color:var(--dim)">${w.d}</span><span>${w.v}"</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log waist on Body tab</p></div>`}
 
-if(pv==="protein"){const last7=so.slice(-7),vals=last7.map(d=>tp(d)).filter(v=>v>0);const avg=vals.length>=2?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;h+=`<div class="cd"><div class="lb">7-Day Protein Avg</div>`;if(avg!==null){const c=avg>=170?"var(--green)":avg>=140?"var(--yellow)":"var(--red)";h+=`<div style="font-size:36px;font-weight:800;color:${c}">${avg}g</div><p style="font-size:12px;color:var(--dim);margin-top:6px">${avg>=170?"On target.":avg>=140?"Add a shake.":"Critical."}</p>`}else h+=`<p class="cm">Need a few days</p>`;h+=`</div>`}
+if(pv==="lifts"){const keys=Object.keys(lp);if(keys.length){const liftColors=["#4f8ff7","#34d399","#fbbf24","#fb923c","#a78bfa"];keys.forEach((name,ki)=>{const entries=lp[name],pr=Math.max(...entries.map(e=>e.w));h+=`<div class="cd"><div class="lb">${name} — PR: ${pr}lbs${entries.length>=2?` (+${pr-entries[0].w})`:""}</div>`;if(entries.length>=2){const ed=entries.map(e=>({d:e.d,v:e.w}));h+=svgLine(ed,liftColors[ki%liftColors.length],"lbs","",320,150)}entries.forEach(e=>{h+=`<div class="re"><span style="color:var(--dim)">${e.d}</span><span>${e.w} lbs${e.w>=pr?' ⭐':''}</span></div>`});h+=`</div>`})}else h+=`<div class="cd"><p class="cm">Log lifts to track PRs</p></div>`}
+
+if(pv==="volume"){const vol=cvol(so);if(vol.length){const vd=vol.map(v=>({d:v.wk,v:v.v}));h+=`<div class="cd"><div class="lb">Weekly Volume (lbs x reps x sets)</div>${vol.length>=2?svgLine(vd,"#34d399","vol","",320,180):svgBars(vd,["#34d399"],320,160)}`;vol.forEach(v=>{h+=`<div class="re"><span style="color:var(--dim)">Wk of ${v.wk}</span><span>${v.v.toLocaleString()} lbs</span></div>`});h+=`</div>`}else h+=`<div class="cd"><p class="cm">Log lifts for volume</p></div>`}
+
+if(pv==="protein"){const last7=so.slice(-7),vals=last7.map(d=>tp(d)).filter(v=>v>0);const avg=vals.length>=2?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;h+=`<div class="cd"><div class="lb">7-Day Protein Avg</div>`;if(avg!==null){const c=avg>=170?"var(--green)":avg>=140?"var(--yellow)":"var(--red)";h+=`<div style="font-size:36px;font-weight:800;color:${c}">${avg}g</div><p style="font-size:12px;color:var(--dim);margin-top:6px">${avg>=170?"On target.":avg>=140?"Add a shake.":"Critical."}</p>`;if(vals.length>=2){const pd=last7.filter(d=>tp(d)>0).map(d=>({d:fm(d),v:tp(d)}));h+=`<div style="margin-top:12px">${svgBars(pd,["#4f8ff7","#34d399","#fbbf24","#fb923c","#a78bfa","#f87171","#4f8ff7"],320,140)}</div>`}}else h+=`<p class="cm">Need a few days</p>`;h+=`</div>`}
 
 el.innerHTML=h;
 }
@@ -300,8 +356,59 @@ function cwa(s){const w={};s.filter(d=>D[d].weight).forEach(d=>{const dt=new Dat
 function clp(s){const by={};s.forEach(d=>(D[d].lifts||[]).forEach(l=>{const k=TL.find(kk=>l.exercise.toLowerCase().includes(kk.toLowerCase()));if(!k||!l.weight)return;if(!by[k])by[k]=[];by[k].push({d:fm(d),w:Number(l.weight)})}));Object.values(by).forEach(arr=>{let best=0;arr.forEach(e=>{best=Math.max(best,e.w);e.best=best})});return by}
 function cvol(s){const w={};s.forEach(d=>{const dt=new Date(d+"T12:00:00"),ws=new Date(dt);ws.setDate(dt.getDate()-dt.getDay());const k=ws.toISOString().split("T")[0];const v=(D[d].lifts||[]).reduce((s,l)=>s+(Number(l.weight)||0)*(Number(l.reps)||0)*(Number(l.sets)||0),0);if(v>0)w[k]=(w[k]||0)+v});return Object.entries(w).sort(([a],[b])=>a.localeCompare(b)).map(([wk,v])=>({wk:fm(wk),v:Math.round(v)}))}
 
+// Preload seed data (user's historical data)
+const SEED_CSV=`### BODY DATA ###
+date,weight_lbs,body_fat_pct,waist_in,total_protein_g,notes
+2026-03-30,,,36,,""
+
+### MEALS DATA ###
+date,meal_name,protein_g,checked
+
+### LIFTS DATA ###
+date,exercise,weight_lbs,reps,sets
+2026-03-30,"Barbell Bench Press",165,5,4
+2026-03-30,"Barbell Bent-Over Row",120,6,4
+2026-03-30,"DB Overhead Press",45,8,3
+2026-03-30,"Chin-Ups or Lat Pulldown",190,6,3
+2026-03-30,"Face Pulls",15,15,3
+2026-03-31,"Barbell Back Squat",185,5,4
+2026-03-31,"Romanian Deadlift",185,8,3
+2026-03-31,"Bulgarian Split Squat",26,5,3
+2026-03-31,"Standing Calf Raise",135,15,3
+2026-03-31,"Leg Curl",80,8,3
+2026-04-02,"DB Incline Bench",55,10,3
+2026-04-02,"Chest-Supported Row",45,10,3
+2026-04-02,"Cable Lateral Raise",10,15,3
+2026-04-02,"Cable Curl",45,10,3
+2026-04-02,"Dips or CG Push-Up",190,10,3
+2026-04-02,"Cable Face Pull",10,10,3
+2026-04-03,"Trap Bar Deadlift or Sumo DL",175,8,3
+2026-04-03,"Leg Press",315,12,3
+2026-04-03,"Walking Lunges",35,12,2
+2026-04-03,"Leg Curl",75,10,3
+2026-04-06,"Barbell Bench Press",165,5,4
+2026-04-06,"Barbell Bent-Over Row",135,6,4
+2026-04-06,"DB Overhead Press",45,6,3
+2026-04-06,"Chin-Ups or Lat Pulldown",190,4,3
+2026-04-06,"Face Pulls",15,15,3
+2026-04-07,"Barbell Back Squat",175,5,4
+2026-04-07,"Romanian Deadlift",175,8,3
+2026-04-07,"Bulgarian Split Squat",26,8,3
+2026-04-07,"Leg Curl",80,10,3
+2026-04-07,"Standing Calf Raise",135,15,3
+2026-04-09,"DB Incline Bench",55,10,3
+2026-04-09,"Chest-Supported Row",55,10,3
+2026-04-09,"Cable Lateral Raise",10,15,3
+2026-04-09,"Cable Curl",45,12,3
+2026-04-09,"Dips or CG Push-Up",190,10,3
+2026-04-09,"Cable Face Pull",15,15,3`;
+
 // Init
-(async()=>{try{await ld()}catch(e){console.log("init err",e);storageOK=false;sss("In-memory mode","#fb923c")}rr()})();
+(async()=>{try{await ld()}catch(e){console.log("init err",e);storageOK=false;sss("In-memory mode","#fb923c")}
+// Seed data on first launch (if no existing lift data)
+const hasData=Object.values(D).some(d=>(d.lifts||[]).length>0);
+if(!hasData){parseCSV(SEED_CSV);sv()}
+rr()})();
 </script>
 </body>
 </html>
