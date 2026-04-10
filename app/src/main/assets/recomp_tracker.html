@@ -404,10 +404,13 @@ date,exercise,weight_lbs,reps,sets
 2026-04-09,"Cable Face Pull",15,15,3`;
 
 // Init
-(async()=>{try{await ld()}catch(e){console.log("init err",e);storageOK=false;sss("In-memory mode","#fb923c")}
+(async()=>{
+try{await ld()}catch(e){console.log("init err",e);storageOK=false;sss("In-memory mode","#fb923c")}
 // Seed data on first launch (if no existing lift data)
+try{
 const hasData=Object.values(D).some(d=>(d.lifts||[]).length>0);
-if(!hasData){parseCSV(SEED_CSV);sv()}
+if(!hasData){const n=parseCSV(SEED_CSV);console.log("Seeded "+n+" records");await sv()}
+}catch(e){console.log("seed err",e)}
 rr()})();
 </script>
 </body>
