@@ -389,6 +389,7 @@ if(pv==="waist"){if(wArr.length>1){h+=`<div class="cd"><div class="lb">Waist His
 
 if(pv==="lifts"){const allEx=Object.keys(lp);if(allEx.length){
 _tglNames=allEx.slice();
+h+=`<button class="bs" onclick="alert('TGL works! Exercises: '+_tglNames.length)" style="margin-bottom:12px">Debug: Test Toggle Click</button>`;
 const exColors=["#4f8ff7","#34d399","#fbbf24","#fb923c","#a78bfa","#f87171","#38bdf8","#818cf8","#fb7185","#2dd4bf","#e879f9","#facc15"];
 const colorMap={};let ci=0;allEx.forEach(n=>{colorMap[n]=exColors[ci%exColors.length];ci++});
 // Group exercises
@@ -429,7 +430,7 @@ if(pv==="protein"){const last7=so.slice(-7),vals=last7.map(d=>tp(d)).filter(v=>v
 el.innerHTML=h;
 }
 window.SPV=function(v){pv=v;rr()};
-window.TGL=function(i){var n=_tglNames[i];if(n){hiddenLifts[n]=!hiddenLifts[n];rr()}};
+window.TGL=function(i){var n=_tglNames[i];if(!n){alert('TGL err: no name at '+i);return}hiddenLifts[n]=!hiddenLifts[n];rr()};
 
 function cwa(s){const w={};s.filter(d=>D[d].weight).forEach(d=>{const dt=new Date(d+"T12:00:00"),ws=new Date(dt);ws.setDate(dt.getDate()-dt.getDay());const k=ws.toISOString().split("T")[0];if(!w[k])w[k]=[];w[k].push(Number(D[d].weight))});return Object.entries(w).sort(([a],[b])=>a.localeCompare(b)).map(([wk,vs])=>({wk:fm(wk),a:Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10}))}
 function clp(s){
